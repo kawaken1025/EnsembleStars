@@ -1,0 +1,276 @@
+// finallyを必ず実行してもらう
+OPTION OPTFINALLY
+// ChkImgX関数をインクルード
+CALL ChkImgX.uws
+startup_chkimgx()
+try
+    //消費LP
+    public useLP = 2
+    public urgentLP = 2
+
+    public LP2_BUTTON_X = 1150
+    public LP2_BUTTON_Y = 750
+    public LP3_BUTTON_X = 1300
+    //フラグ管理
+    //LP、AP回復
+    public recoveryLP_flag = true
+    public recoveryAP_flag = true
+    //実行環境がsurfaceであるか
+    public surfaceFlag     = false
+    //緊急ライブを行うかどうか
+    public urgentLiveFlag  = false
+
+    //[画像認識座標]
+    //ホーム画面のプロデュースボタン
+    public PRODUCE_HOME_X  = 1200 
+    public PRODUCE_HOME_Y  = 700
+    //特大アイコンXY
+    public EXTRA_LARGE_X = 915
+    public EXTRA_LAEGE_Y = 389
+    //バトルボタン
+    public BATTLE_BUTTON_X = 891
+    public BATTLE_BUTTON_Y = 727
+    //プロデュースへボタン
+    public GO_PRODUCE_X = 1029
+    public GO_PRODUCE_Y = 772
+
+
+    //[ボタン選択]
+    //プロデュースへボタン→コース選択
+    public SELECT_COURSE_X = 1000
+    public SELECT_COURSE_Y = 600
+    //プロデュース開始！ボタン選択
+    public PRODUCE_START_BUTTON_X = 1200
+    public PRODUCE_START_BUTTON_Y = 750
+    //ライブ実行ボタン
+    public PERFORMANCE_BUTTON_X = 1250
+    public PERFORMANCE_BUTTON_Y = 800
+    //Skipボタン選択
+    public SKIP_BUTTON_X = 1400
+    public SKIP_BUTTON_Y = 300
+    //ライブ後OKボタン選択
+    public LIVE_OK_BUTTON_X = 1200
+    public LIVE_OK_BUTTON_Y = 800
+    //プロデュース中央ボタン
+    public PRODUCE_EXEC_X = 920
+    public PRODUCE_EXEC_Y = 815
+    //プロデュース中央上ボタン
+    public PRODUCE_EXEC_Y2 = 600
+
+    //メイン処理
+    while TRUE
+
+        for i = 1 to 5
+            BTN(LEFT,CLICK,PRODUCE_EXEC_X,PRODUCE_EXEC_Y,200)
+            BTN(LEFT,CLICK,PRODUCE_EXEC_X,PRODUCE_EXEC_Y2,200)
+        next
+
+        checkPictures()
+
+    wend
+
+finally
+  shutdown_chkimgx()
+endtry
+
+//======================================
+// 画像認識をまとめて行って処理を分岐させるメソッド
+//======================================
+function checkPictures()
+
+    if chkimgx("participation.png",0,0,0,1500,1000,-1,5) THEN extraLargeCheck()
+    if chkimgx("skip_pc.png",0,0,0,1500,1500,-1,5) THEN BTN(LEFT,CLICK,SKIP_BUTTON_X,SKIP_BUTTON_Y)
+    //プロデュースボタンを押したときにAP不足があればrecoveryAP_FlagがTrueの時に回復を行います
+    ifb chkimgx("goProduce.png",0,0,0,1500,1500,-1,5)
+        BTN(LEFT,CLICK,G_IMGX_X,G_IMGX_Y)
+        infoLogger("プロデュースを開始しました。")
+    endif
+    if chkimgx("courseDetail.PNG",0,0,0,1500,1500,-1,5) THEN BTN(LEFT,CLICK,PRODUCE_START_BUTTON_X,PRODUCE_START_BUTTON_Y)
+    //解像度の違いにょって判定が難しくなるためsurfaceFlagで認識画像を変更します
+    ifb surfaceFlag
+        if chkimgx("ok_pc.png",0,0,0,1500,1500,-1,5) THEN BTN(LEFT,CLICK,LIVE_OK_BUTTON_X,LIVE_OK_BUTTON_Y)
+    else
+        if chkimgx("ok_pc2.png",0,0,0,1500,1500,-1,5) THEN BTN(LEFT,CLICK,LIVE_OK_BUTTON_X,LIVE_OK_BUTTON_Y)
+    endif
+    if chkimgx("battleStart.png",0,0,0,1500,1500,-1,5) THEN battle()
+    ifb chkimgx("recoveryAP.png",0,0,0,1500,1000,-1,5)
+        ifb recoveryAP_flag
+            infoLogger("AP回復フラグがTrueです。APを回復します")
+            BTN(LEFT,CLICK,G_IMGX_X,G_IMGX_Y,400)
+            sleep(1)
+            BTN(LEFT,CLICK,1050,670,400)
+        endif
+        infoLogger("APを回復しました")
+    endif
+
+    ifb chkimgx("errorAlarm2.png",0,0,0,1500,400,-1,5)
+        infoLogger("エラーアラームを検知しました。再起動します")
+        BTN(LEFT,CLICK,G_IMGX_X,G_IMGX_Y,1000)
+        initPage()
+    endif
+    result = 0
+fend
+
+//======================================
+// バトルボタンがあれば押してスキップするメソッド
+//======================================
+function battle()
+
+
+    BTN(LEFT,CLICK,BATTLE_BUTTON_X,BATTLE_BUTTON_Y,300)
+    infoLogger("バトルを開始しました")
+    infoLogger("SKIPボタンが出るまで待機します")
+    while !CHKIMGX("skip_pc.png",0,0,0,1500,600,-1,3)
+        sleep(1)
+    wend
+    BTN(LEFT,CLICK,SKIP_BUTTON_X,SKIP_BUTTON_Y,300)
+    infoLogger("SKIPしました")
+
+    result = 0
+
+fend
+
+//======================================
+// ライブ発生時に特大or緊急かを判定するメソッド
+//======================================
+function extraLargeCheck()
+
+    //ライブ画面
+    PARTICIPATION_X = 1068
+    PARTICIPATION_Y = 649
+    //依頼を断るボタン選択
+    PASS_BUTTON_X = 1000
+    PASS_BUTTON_Y = 800
+    //キャンセルボタン選択
+    CANCEL_BUTTON_X = 1100
+    CANCEL_BUTTON_Y = 650
+
+    sleep(0.5)
+    ifb chkimgx("extraLarge.png",0,0,0,1500,1000,-1,3)
+        BTN(LEFT,CLICK,PARTICIPATION_X,PARTICIPATION_Y,200)
+        BTN(LEFT,CLICK,PARTICIPATION_X,PARTICIPATION_Y,300)
+        infoLogger("特大ライブを検出しました。ライブを実行します")
+        extraLargeLive(useLP)
+    elseif chkimgx("urgent.bmp",0,0,0,1500,1000,-1,3)
+        ifb urgentLiveFlag
+            BTN(LEFT,CLICK,PARTICIPATION_X,PARTICIPATION_Y,200)
+            BTN(LEFT,CLICK,PARTICIPATION_X,PARTICIPATION_Y,300)
+            infoLogger("緊急ライブを検出しました。ライブを実行します")
+            extraLargeLive(urgentLP)
+        else
+            infoLogger("緊急LiveフラグがFalseです。キャンセルします")
+            BTN(LEFT,CLICK,PASS_BUTTON_X,PASS_BUTTON_Y,1000)
+            BTN(LEFT,CLICK,PASS_BUTTON_X,PASS_BUTTON_Y,300)
+            BTN(LEFT,CLICK,CANCEL_BUTTON_X,CANCEL_BUTTON_Y,2000)
+            BTN(LEFT,CLICK,CANCEL_BUTTON_X,CANCEL_BUTTON_Y,300)
+        endif
+    else
+        infoLogger("通常ライブを検出しました。キャンセルします")
+        BTN(LEFT,CLICK,PASS_BUTTON_X,PASS_BUTTON_Y,1000)
+        BTN(LEFT,CLICK,PASS_BUTTON_X,PASS_BUTTON_Y,300)
+        BTN(LEFT,CLICK,CANCEL_BUTTON_X,CANCEL_BUTTON_Y,2000)
+        BTN(LEFT,CLICK,CANCEL_BUTTON_X,CANCEL_BUTTON_Y,300)
+    endif
+
+    result = 0
+
+fend
+
+//======================================
+// 特大ライブ、緊急ライブを行うメソッド
+//======================================
+function extraLargeLive(attackLP)
+
+    infoLogger("出演ボタンが出るまで待機します")
+    while !CHKIMGX("performanceButton.PNG",0,0,0,1500,1000,-1,3)
+        sleep(1)
+    wend
+
+    sleep(1)
+    infoLogger("現在のLP使用設定は" + attackLP + "です")
+
+    select attackLP
+    case 1
+        //何もしない
+    case 2
+        BTN(LEFT,CLICK,LP2_BUTTON_X,LP2_BUTTON_Y,1000)
+    case 3
+        BTN(LEFT,CLICK,LP3_BUTTON_X,LP2_BUTTON_Y,1000)
+    selend
+
+    sleep(1)
+    infoLogger("SKIPボタンが出るまで待機します")
+    BTN(LEFT,CLICK,PERFORMANCE_BUTTON_X,PERFORMANCE_BUTTON_Y,200)
+    while !CHKIMGX("skip_pc.png",0,0,0,1500,600,-1,3)
+        sleep(1)
+        ifb chkimgx("recoveryLP.PNG",0,0,0,1500,1500)
+            recoveryLP()
+            infoLogger("LPが不足しています。回復処理へ移ります")
+        endif
+    wend
+    infoLogger("SKIPしました")
+
+    result = 0
+
+fend
+
+//======================================
+// LPを回復するメソッド
+//======================================
+function recoveryLP()
+    ifb recoveryLP_flag
+        infoLogger("回復フラグがTrueなのでLPを回復してライブを実行します")
+        BTN(LEFT,CLICK,G_IMGX_X,G_IMGX_Y)
+    else
+        infoLogger("回復フラグがfalseです。ホーム画面へ移動します")
+        BTN(LEFT,CLICK,1000,750,300)
+        BTN(LEFT,CLICK,500,300,700)
+    endif
+
+    result = 0
+fend
+
+
+//=====================================
+// エラー時にプロデュースへ戻る処理
+//=====================================
+function initPage()
+
+    sleep(10)
+    BTN(LEFT,CLICK,1100,500,1000)
+    BTN(LEFT,CLICK,1100,500,1000)
+
+    infoLogger("トップページを読み込むまで待機します")
+    while !CHKIMGX("topPage.png",0,0,0,1500,1000,-1,3)
+        sleep(1)
+    wend
+
+    //ホーム画面へ
+    BTN(LEFT,CLICK,500,300,400)
+    BTN(LEFT,CLICK,500,300,400)
+    BTN(LEFT,CLICK,500,300,400)
+
+    //プロデュースボタン
+    BTN(LEFT,CLICK,1300,700,400)
+    BTN(LEFT,CLICK,1300,700,400)
+
+    result = 0
+
+fend
+
+//======================================
+// ログを出力するメソッド
+//======================================
+function infoLogger( outputLog )
+
+    const INFO_LOG = "[INFO]";
+    GETTIME();
+    date = "" + G_TIME_YY4 + "/" + G_TIME_MM2 + "/" + G_TIME_DD2;
+    time = "" + G_TIME_HH2 + ":" + G_TIME_NN2;
+    dateTime = INFO_LOG + "[" + date + " " + time + "] ";
+
+    print dateTime + outputLog; 
+
+    result = 0;
+
+fend
